@@ -1,0 +1,1 @@
+# SnowSpot Backend Application
