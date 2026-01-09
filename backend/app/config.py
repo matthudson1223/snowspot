@@ -46,8 +46,8 @@ class Settings(BaseSettings):
     # Monitoring
     sentry_dsn: Optional[str] = None
 
-    # CORS
-    cors_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
+    # CORS - can be comma-separated or wildcard
+    cors_origins: str = "*"
 
     # Rate Limiting
     api_rate_limit: int = 100  # per minute
@@ -55,6 +55,12 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = False
+
+    def get_cors_origins(self) -> list[str]:
+        """Parse CORS origins from string (comma-separated or wildcard)."""
+        if self.cors_origins == "*":
+            return ["*"]
+        return [origin.strip() for origin in self.cors_origins.split(",")]
 
 
 @lru_cache()
