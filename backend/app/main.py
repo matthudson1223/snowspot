@@ -15,7 +15,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.config import settings
 from app.database import engine
 from app import models
-from app.routers import resorts, conditions
+from app.routers import resorts, conditions, forecasts
 from app.schemas.api_response import (
     create_success_response,
     create_error_response,
@@ -151,6 +151,11 @@ app.include_router(
     conditions.router,
     prefix="/api/v1/conditions",
     tags=["Conditions"],
+)
+app.include_router(
+    forecasts.router,
+    prefix="/api/v1/forecasts",
+    tags=["Forecasts"],
 )
 
 
