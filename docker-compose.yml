@@ -1,0 +1,142 @@
+services:
+  # PostgreSQL Database with TimescaleDB
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    container_name: snowspot-postgres
+    environment:
+      POSTGRES_USER: snowspot
+      POSTGRES_PASSWORD: snowspot
+      POSTGRES_DB: snowspot
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U snowspot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - snowspot-network
+
+  # Redis for caching and Celery broker
+  redis:
+    image: redis:7-alpine
+    container_name: snowspot-redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - snowspot-network
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: snowspot-backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_NAME=SnowSpot
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - API_VERSION=v1
+      - DATABASE_URL=postgresql://snowspot:snowspot@postgres:5432/snowspot
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - CORS_ORIGINS=["http://localhost:5173","http://localhost:3000"]
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - snowspot-network
+
+  # Celery Worker for background tasks (commented out until Celery is configured)
+  # Uncomment when you set up app/celery_app.py
+  # celery-worker:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #   container_name: snowspot-celery-worker
+  #   command: celery -A app.celery_app worker --loglevel=info
+  #   volumes:
+  #     - ./backend:/app
+  #   environment:
+  #     - APP_NAME=SnowSpot
+  #     - ENVIRONMENT=development
+  #     - DEBUG=true
+  #     - SECRET_KEY=dev-secret-key-change-in-production
+  #     - DATABASE_URL=postgresql://snowspot:snowspot@postgres:5432/snowspot
+  #     - REDIS_URL=redis://redis:6379/0
+  #     - CELERY_BROKER_URL=redis://redis:6379/1
+  #     - CELERY_RESULT_BACKEND=redis://redis:6379/2
+  #   depends_on:
+  #     - postgres
+  #     - redis
+  #   networks:
+  #     - snowspot-network
+
+  # Celery Beat for scheduled tasks (commented out until Celery is configured)
+  # Uncomment when you set up app/celery_app.py
+  # celery-beat:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #   container_name: snowspot-celery-beat
+  #   command: celery -A app.celery_app beat --loglevel=info
+  #   volumes:
+  #     - ./backend:/app
+  #   environment:
+  #     - APP_NAME=SnowSpot
+  #     - ENVIRONMENT=development
+  #     - DEBUG=true
+  #     - SECRET_KEY=dev-secret-key-change-in-production
+  #     - DATABASE_URL=postgresql://snowspot:snowspot@postgres:5432/snowspot
+  #     - REDIS_URL=redis://redis:6379/0
+  #     - CELERY_BROKER_URL=redis://redis:6379/1
+  #     - CELERY_RESULT_BACKEND=redis://redis:6379/2
+  #   depends_on:
+  #     - postgres
+  #     - redis
+  #   networks:
+  #     - snowspot-network
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: snowspot-frontend
+    command: npm run dev -- --host 0.0.0.0 --port 5173
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000/api/v1
+    depends_on:
+      - backend
+    networks:
+      - snowspot-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  snowspot-network:
+    driver: bridge
