@@ -11,6 +11,12 @@ from pydantic import BaseModel, Field, HttpUrl, ConfigDict
 class ResortBase(BaseModel):
     """Base schema for resort data."""
 
+    model_config = ConfigDict(
+        json_encoders={
+            Decimal: float  # Convert Decimal to float for JSON serialization
+        }
+    )
+
     name: str = Field(..., min_length=1, max_length=255, description="Resort name")
     slug: str = Field(
         ..., min_length=1, max_length=255, description="URL-friendly identifier"
@@ -102,7 +108,12 @@ class ResortUpdate(BaseModel):
 class ResortResponse(ResortBase):
     """Schema for resort response data."""
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_encoders={
+            Decimal: float  # Convert Decimal to float for JSON serialization
+        }
+    )
 
     id: int = Field(..., description="Unique resort ID")
     base_elevation_ft: Optional[int] = Field(
@@ -126,7 +137,12 @@ class ResortResponse(ResortBase):
 class ResortSummary(BaseModel):
     """Lightweight resort summary for lists."""
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_encoders={
+            Decimal: float  # Convert Decimal to float for JSON serialization
+        }
+    )
 
     id: int
     name: str

@@ -11,6 +11,12 @@ from pydantic import BaseModel, Field, ConfigDict, field_validator
 class ConditionBase(BaseModel):
     """Base schema for condition data."""
 
+    model_config = ConfigDict(
+        json_encoders={
+            Decimal: float  # Convert Decimal to float for JSON serialization
+        }
+    )
+
     # Snow measurements (inches)
     base_depth_in: Optional[Decimal] = Field(
         None, ge=0, le=9999, description="Base depth in inches"
@@ -98,7 +104,12 @@ class ConditionCreate(ConditionBase):
 class ConditionResponse(ConditionBase):
     """Schema for condition response data."""
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_encoders={
+            Decimal: float  # Convert Decimal to float for JSON serialization
+        }
+    )
 
     time: datetime = Field(..., description="Timestamp of conditions")
     resort_id: int = Field(..., description="Resort ID")
@@ -134,7 +145,12 @@ class ConditionWithQuality(ConditionResponse):
 class ConditionSummary(BaseModel):
     """Lightweight condition summary."""
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_encoders={
+            Decimal: float  # Convert Decimal to float for JSON serialization
+        }
+    )
 
     time: datetime
     resort_id: int
@@ -160,7 +176,12 @@ class ConditionHistory(BaseModel):
 class LatestConditions(BaseModel):
     """Latest conditions for a resort with summary stats."""
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_encoders={
+            Decimal: float  # Convert Decimal to float for JSON serialization
+        }
+    )
 
     resort_id: int
     resort_name: str
@@ -180,7 +201,12 @@ class LatestConditions(BaseModel):
 class ResortWithLatestCondition(BaseModel):
     """Resort data with its latest condition."""
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_encoders={
+            Decimal: float  # Convert Decimal to float for JSON serialization
+        }
+    )
 
     # Resort fields
     id: int

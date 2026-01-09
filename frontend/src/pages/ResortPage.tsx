@@ -39,7 +39,7 @@ export default function ResortPage() {
     return <ErrorMessage error={resortError || new Error('Resort not found')} onRetry={() => refetch()} />;
   }
 
-  const conditions = resort.latest_conditions;
+  const conditions = resort.latest_condition;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

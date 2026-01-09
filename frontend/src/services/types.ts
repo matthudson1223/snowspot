@@ -51,7 +51,7 @@ export interface Conditions {
 }
 
 export interface ResortWithConditions extends Resort {
-  latest_conditions: Conditions | null;
+  latest_condition: Conditions | null;
 }
 
 export interface Forecast {

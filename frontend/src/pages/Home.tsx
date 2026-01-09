@@ -36,13 +36,13 @@ export default function Home() {
       switch (sortBy) {
         case 'snow':
           return (
-            (b.latest_conditions?.new_snow_24h_in ?? -1) -
-            (a.latest_conditions?.new_snow_24h_in ?? -1)
+            (b.latest_condition?.new_snow_24h_in ?? -1) -
+            (a.latest_condition?.new_snow_24h_in ?? -1)
           );
         case 'quality':
           return (
-            (b.latest_conditions?.snow_quality_score ?? -1) -
-            (a.latest_conditions?.snow_quality_score ?? -1)
+            (b.latest_condition?.snow_quality_score ?? -1) -
+            (a.latest_condition?.snow_quality_score ?? -1)
           );
         case 'name':
         default:

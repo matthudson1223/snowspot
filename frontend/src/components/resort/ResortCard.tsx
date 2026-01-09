@@ -21,7 +21,7 @@ interface ResortCardProps {
 }
 
 export default function ResortCard({ resort }: ResortCardProps) {
-  const conditions = resort.latest_conditions;
+  const conditions = resort.latest_condition;
 
   // Calculate lift percentage for progress bar
   const liftPercentage =

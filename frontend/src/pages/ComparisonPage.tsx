@@ -103,14 +103,14 @@ export default function ComparisonPage() {
                     {comparisonData?.map((resort) => (
                       <td key={resort.id} className="px-6 py-4 text-center">
                         <span
-                          className={`text-2xl font-bold ${getQualityColorClass(resort.latest_conditions?.snow_quality_score)}`}
+                          className={`text-2xl font-bold ${getQualityColorClass(resort.latest_condition?.snow_quality_score)}`}
                         >
-                          {resort.latest_conditions?.snow_quality_score != null
-                            ? Math.round(resort.latest_conditions.snow_quality_score)
+                          {resort.latest_condition?.snow_quality_score != null
+                            ? Math.round(resort.latest_condition.snow_quality_score)
                             : '--'}
                         </span>
                         <div className="text-xs text-gray-500 mt-1">
-                          {getQualityLabel(resort.latest_conditions?.snow_quality_score)}
+                          {getQualityLabel(resort.latest_condition?.snow_quality_score)}
                         </div>
                       </td>
                     ))}
@@ -126,8 +126,8 @@ export default function ComparisonPage() {
                         key={resort.id}
                         className="px-6 py-4 text-center text-lg font-semibold"
                       >
-                        {resort.latest_conditions?.new_snow_24h_in != null
-                          ? `${formatNumber(resort.latest_conditions.new_snow_24h_in)}"`
+                        {resort.latest_condition?.new_snow_24h_in != null
+                          ? `${formatNumber(resort.latest_condition.new_snow_24h_in)}"`
                           : '--'}
                       </td>
                     ))}
@@ -143,8 +143,8 @@ export default function ComparisonPage() {
                         key={resort.id}
                         className="px-6 py-4 text-center text-lg font-semibold"
                       >
-                        {resort.latest_conditions?.base_depth_in != null
-                          ? `${formatNumber(resort.latest_conditions.base_depth_in)}"`
+                        {resort.latest_condition?.base_depth_in != null
+                          ? `${formatNumber(resort.latest_condition.base_depth_in)}"`
                           : '--'}
                       </td>
                     ))}
@@ -160,7 +160,7 @@ export default function ComparisonPage() {
                         key={resort.id}
                         className="px-6 py-4 text-center text-lg font-semibold"
                       >
-                        {formatTemperature(resort.latest_conditions?.temperature_f)}
+                        {formatTemperature(resort.latest_condition?.temperature_f)}
                       </td>
                     ))}
                   </tr>
@@ -175,9 +175,9 @@ export default function ComparisonPage() {
                         key={resort.id}
                         className="px-6 py-4 text-center text-lg font-semibold"
                       >
-                        {resort.latest_conditions?.lifts_open != null &&
-                        resort.latest_conditions?.lifts_total != null
-                          ? `${resort.latest_conditions.lifts_open}/${resort.latest_conditions.lifts_total}`
+                        {resort.latest_condition?.lifts_open != null &&
+                        resort.latest_condition?.lifts_total != null
+                          ? `${resort.latest_condition.lifts_open}/${resort.latest_condition.lifts_total}`
                           : '--'}
                       </td>
                     ))}

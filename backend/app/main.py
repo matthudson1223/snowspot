@@ -4,7 +4,10 @@ SnowSpot API - FastAPI Application Entry Point.
 Real-time snow conditions platform API with standardized response formatting.
 """
 
+import json
 from contextlib import asynccontextmanager
+from decimal import Decimal
+from typing import Any
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -59,6 +62,29 @@ if SENTRY_AVAILABLE and settings.sentry_dsn:
         environment=settings.environment,
     )
 
+# Custom response class that handles Decimal serialization
+class CustomJSONResponse(JSONResponse):
+    """JSON response that properly serializes Decimal types."""
+
+    def render(self, content: Any) -> bytes:
+        """Render content with custom JSON encoder."""
+        return json.dumps(
+            content,
+            ensure_ascii=False,
+            allow_nan=False,
+            indent=None,
+            separators=(",", ":"),
+            default=self._json_encoder,
+        ).encode("utf-8")
+
+    @staticmethod
+    def _json_encoder(obj):
+        """Custom JSON encoder to handle Decimal types."""
+        if isinstance(obj, Decimal):
+            return float(obj)
+        raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
+
+
 # Create FastAPI application
 app = FastAPI(
     title=settings.app_name,
@@ -69,6 +95,7 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
+    default_response_class=CustomJSONResponse,
 )
 
 # Add CORS middleware
@@ -93,7 +120,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     field = ".".join(str(loc) for loc in first_error.get("loc", []))
     message = first_error.get("msg", "Validation error")
 
-    return JSONResponse(
+    return CustomJSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content=create_error_response(
             code=ErrorCodes.VALIDATION_ERROR,
@@ -107,7 +134,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 @app.exception_handler(SQLAlchemyError)
 async def database_exception_handler(request: Request, exc: SQLAlchemyError):
     """Handle database errors with standardized response."""
-    return JSONResponse(
+    return CustomJSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content=create_error_response(
             code=ErrorCodes.INTERNAL_ERROR,
@@ -122,7 +149,7 @@ async def general_exception_handler(request: Request, exc: Exception):
     """Handle unexpected errors with standardized response."""
     if settings.debug:
         # In debug mode, include error details
-        return JSONResponse(
+        return CustomJSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content=create_error_response(
                 code=ErrorCodes.INTERNAL_ERROR,
@@ -132,7 +159,7 @@ async def general_exception_handler(request: Request, exc: Exception):
         )
     else:
         # In production, hide error details
-        return JSONResponse(
+        return CustomJSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content=create_error_response(
                 code=ErrorCodes.INTERNAL_ERROR,
