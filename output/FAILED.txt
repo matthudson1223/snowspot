@@ -1,0 +1,1 @@
+STOPPED at step 'NOAA CPC ONI table': ONI download failed: https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt: HTTPSConnectionPool(host='www.cpc.ncep.noaa.gov', port=443): Max retries exceeded with url: /data/indices/oni.ascii.txt (Caused by ProxyError('Unable to connect to proxy', OSError('Tunnel connection failed: 403 Forbidden')))

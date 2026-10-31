@@ -1,488 +1,113 @@
-# SnowSpot
+# El Niño snowfall × Ikon Pass map (North America)
 
-> **Automated Snow Intelligence Platform** - Real-time ski resort conditions powered by multi-source data aggregation and quality scoring.
+This pipeline maps winter (Dec–Feb) snowfall anomalies across the US and Canada with every North American Ikon Pass destination overlaid. It produces:
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
-[![React 19](https://img.shields.io/badge/React-19-blue.svg)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
+- **(a)** an ERA5 composite of all El Niño winters
+- **(b)** an ERA5 composite of strong/super El Niño winters
+- **(c)** the 2026/27 seasonal forecast (ECMWF, plus a C3S multi-system mean)
 
-## Overview
+Everything is built from downloaded data. If any download fails, the pipeline stops and writes the reason to `output/FAILED.txt`. Nothing is estimated, interpolated from memory or hand-built.
 
-SnowSpot is a comprehensive snow conditions platform that automatically aggregates data from multiple sources to provide accurate, real-time information about ski resort conditions. Unlike traditional condition reports that rely on manual updates, SnowSpot combines official resort data, government weather stations (SNOTEL), weather APIs, and webcam analysis to deliver reliable, frequently-updated conditions.
+## Status
 
-### Key Features
+**The outputs have not been generated yet.** The build environment's network policy denied every primary source the pipeline needs, and no CDS API key was configured. The last run stopped with:
 
-- **Real-Time Conditions**: Automated data collection every 15 minutes from 50+ ski resorts
-- **Multi-Source Data Fusion**: Combines resort reports, SNOTEL stations, and weather APIs with confidence scoring
-- **Snow Quality Scoring**: Proprietary algorithm that rates snow quality (0-100) based on freshness, temperature, wind, and other factors
-- **7-Day Forecasts**: Integrated weather forecasting for planning your next ski trip
-- **Resort Comparison**: Side-by-side comparison of multiple resorts
-- **Powder Alerts**: Email notifications when conditions meet your criteria
-- **Public API**: RESTful API with standardized responses for developers
+| Source | Host | Result |
+|---|---|---|
+| ERA5 monthly means, C3S seasonal forecasts | `cds.climate.copernicus.eu` | proxy `403 Forbidden` on CONNECT; no `CDSAPI_KEY` / `~/.cdsapirc` |
+| ONI table | `www.cpc.ncep.noaa.gov` | proxy `403 Forbidden` |
+| Ikon destinations | `www.ikonpass.com` | proxy `403 Forbidden` |
+| Geocoding | `nominatim.openstreetmap.org` | proxy `403 Forbidden` |
+| Natural Earth (primary) | `naciscdn.org` | proxy `403 Forbidden`; the official GitHub mirror (`raw.githubusercontent.com/nvkelso/natural-earth-vector`) worked |
 
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                  DATA SOURCES                            │
-│   Resort APIs │ SNOTEL Stations │ Weather APIs │ Webcams │
-└─────────────────────────────────────────────────────────┘
-                          ↓
-┌─────────────────────────────────────────────────────────┐
-│              DATA COLLECTION (Celery)                    │
-│   Scrapers │ API Clients │ Scheduled Tasks              │
-└─────────────────────────────────────────────────────────┘
-                          ↓
-┌─────────────────────────────────────────────────────────┐
-│       PROCESSING & STORAGE                               │
-│   Data Fusion │ Quality Scoring │ PostgreSQL+TimescaleDB│
-└─────────────────────────────────────────────────────────┘
-                          ↓
-┌─────────────────────────────────────────────────────────┐
-│                 API LAYER (FastAPI)                      │
-│   REST Endpoints │ Validation │ Error Handling          │
-└─────────────────────────────────────────────────────────┘
-                          ↓
-┌─────────────────────────────────────────────────────────┐
-│              FRONTEND (React + TypeScript)               │
-│   Dashboard │ Resort Pages │ Comparison │ Alerts        │
-└─────────────────────────────────────────────────────────┘
-```
-
-## Tech Stack
-
-### Backend
-- **Framework**: FastAPI 0.104+ (Python 3.11+)
-- **Database**: PostgreSQL 16 with TimescaleDB extension
-- **Cache**: Redis 7+
-- **Task Queue**: Celery 5+ with Redis broker
-- **Web Scraping**: BeautifulSoup4, Selenium, httpx
-- **Data Processing**: Pandas, NumPy
-- **ORM**: SQLAlchemy 2.0
-- **Migrations**: Alembic
-
-### Frontend
-- **Framework**: React 19 with TypeScript 5.9
-- **Build Tool**: Vite 7
-- **Styling**: TailwindCSS 4
-- **State Management**: React Query (TanStack Query)
-- **Charts**: Recharts
-- **HTTP Client**: Axios
-- **Routing**: React Router v7
-
-### Infrastructure
-- **Containerization**: Docker + Docker Compose
-- **CI/CD**: GitHub Actions (optional)
-- **Monitoring**: Sentry (optional)
-- **Deployment**: Railway / Render / Vercel
-
-## Project Structure
-
-```
-snowspot/
-├── backend/                    # FastAPI backend
-│   ├── app/
-│   │   ├── main.py            # Application entry point
-│   │   ├── config.py          # Configuration settings
-│   │   ├── database.py        # Database connection
-│   │   ├── models/            # SQLAlchemy models
-│   │   ├── schemas/           # Pydantic schemas
-│   │   ├── routers/           # API endpoints
-│   │   ├── services/          # Business logic
-│   │   │   ├── data_fusion.py
-│   │   │   └── quality_scorer.py
-│   │   ├── scrapers/          # Data collection
-│   │   └── utils/
-│   ├── alembic/               # Database migrations
-│   ├── tests/                 # Test suite
-│   ├── requirements.txt
-│   └── .env.example
-│
-├── frontend/                   # React frontend
-│   ├── src/
-│   │   ├── components/        # React components
-│   │   ├── pages/            # Page components
-│   │   ├── services/         # API client
-│   │   ├── hooks/            # Custom React hooks
-│   │   └── utils/
-│   ├── public/
-│   ├── package.json
-│   └── .env.example
-│
-└── docs/                      # Documentation
-```
-
-## Getting Started
-
-### Prerequisites
-
-- Python 3.11 or higher
-- Node.js 18 or higher
-- PostgreSQL 16+ (or Docker)
-- Redis 7+ (or Docker)
-
-### Quick Start with Docker
-
-The fastest way to get started is using Docker Compose:
+To run it, allow those hosts (or use an unrestricted network), set `CDSAPI_KEY`, and accept the licences on each CDS dataset page: ERA5 monthly means, seasonal post-processed single levels, and seasonal monthly single levels. Then run:
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/snowspot.git
-cd snowspot
-
-# Start all services
-docker-compose up -d
-
-# Run database migrations
-docker-compose exec backend alembic upgrade head
-
-# Access the application
-# Frontend: http://localhost:5173
-# Backend API: http://localhost:8000
-# API Docs: http://localhost:8000/docs
-```
-
-### Local Development Setup
-
-#### Backend Setup
-
-```bash
-# Navigate to backend directory
-cd backend
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
 pip install -r requirements.txt
-
-# Copy environment file and configure
-cp .env.example .env
-# Edit .env with your configuration
-
-# Run database migrations
-alembic upgrade head
-
-# Start the development server
-uvicorn app.main:app --reload --port 8000
-
-# In a separate terminal, start Celery worker
-celery -A tasks.celery_app worker --loglevel=info
-
-# In another terminal, start Celery beat scheduler
-celery -A tasks.celery_app beat --loglevel=info
+export CDSAPI_KEY=<personal access token from https://cds.climate.copernicus.eu/profile>
+python pipeline/run_all.py            # add --ecmwf-only to skip the multi-system layer
 ```
 
-#### Frontend Setup
+`fetch_ikon.py` writes `data/ikon_destinations_2026_27.csv`. **Review it against ikonpass.com** for pass tier, access days and base-area coordinates, then re-run. Edited rows are preserved.
 
-```bash
-# Navigate to frontend directory
-cd frontend
+## Outputs (`output/`)
 
-# Install dependencies
-npm install
+| File | Contents |
+|---|---|
+| `snow_anomaly_grid.csv` | ERA5 0.25° grid. Columns: `lon, lat, is_land, clim_djf_in`; `<layer>_in` (anomaly, water-equivalent inches); `<layer>_pct` (% of normal); and for the composites `<layer>_p` (t-test p-value) and `<layer>_sig` (p < 0.10). Forecast columns are bilinearly interpolated from the ~1° native grid. |
+| `ikon_resorts.csv` | One row per resort. Columns: resort, state/province, country, region, lat, lon, pass access, `source_url` (Ikon list), `coord_source` (OSM object); `in_data_domain` and `on_land` flags; normal DJF w.e.; and for each layer `_in`, `_snow10_in` (approximate snowfall at 10:1) and `_pct`, bilinearly sampled. |
+| `snow_ikon_map_<layer>.png` / `_pct.png` | 3200 × 2320 px, Lambert conformal conic, brown→blue diverging scale centred on 0 (or 100 %), shading clipped to land minus lakes. Hatching marks p ≥ 0.10. |
+| `index.html` | Single self-contained page with images and data inlined. It has layer and unit toggles, resort tooltips (hover or tap), a sortable, searchable table, a methods section, and light/dark support. |
+| `summary.txt` | El Niño year lists, forecast init date, and the top 5 surplus/deficit resorts per layer. |
 
-# Copy environment file and configure
-cp .env.example .env
-# Edit .env with your configuration
+Layers: `elnino_all`, `elnino_strong`, `forecast_ecmwf`, `forecast_c3s`.
 
-# Start development server
-npm run dev
+## Exact CDS requests
+
+All requests use the new CDS API (`cdsapi>=0.7.4`, `https://cds.climate.copernicus.eu/api`). Every request actually sent is also logged to `data/interim/cds_requests.json`.
+
+**ERA5**: `reanalysis-era5-single-levels-monthly-means`
+
+```python
+{"product_type": ["monthly_averaged_reanalysis"], "variable": ["snowfall"], "time": ["00:00"],
+ "year": ["1950", ..., "2025"], "month": ["01", "02", "12"],
+ "data_format": "netcdf", "download_format": "unarchived", "area": [62, -140, 22, -52]}
+# plus the same with "year": ["2026"], "month": ["01", "02"] for the most recent winter
 ```
 
-The frontend will be available at [http://localhost:5173](http://localhost:5173)
+**Seasonal (preferred)**: `seasonal-postprocessed-single-levels`
 
-### Environment Variables
-
-#### Backend (.env)
-
-```bash
-# Application
-APP_NAME=SnowSpot
-ENVIRONMENT=development
-DEBUG=true
-SECRET_KEY=your-secret-key-here
-API_VERSION=v1
-
-# Database
-DATABASE_URL=postgresql://user:password@localhost:5432/snowspot
-
-# Redis
-REDIS_URL=redis://localhost:6379/0
-CELERY_BROKER_URL=redis://localhost:6379/1
-CELERY_RESULT_BACKEND=redis://localhost:6379/2
-
-# API Keys (optional)
-OPENWEATHER_API_KEY=your-key-here
-MAPBOX_API_KEY=your-key-here
-
-# CORS
-CORS_ORIGINS=["http://localhost:5173"]
+```python
+{"originating_centre": "ecmwf", "system": "<latest, read from constraints.json>",
+ "variable": ["snowfall_anomalous_rate_of_accumulation"], "product_type": ["ensemble_mean"],
+ "year": ["2026"], "month": ["11"],          # or "10" if November is not yet published
+ "leadtime_month": ["2", "3", "4"],          # Nov init -> Dec, Jan, Feb ("3","4","5" for an Oct init)
+ "data_format": "grib", "area": [62, -140, 22, -52]}
 ```
 
-#### Frontend (.env)
+The same request is repeated for `ukmo`, `meteo_france`, `dwd`, `cmcc`, `ncep`, `jma` and `eccc`, all at the same init month. The script reads each dataset's `constraints.json` to choose the newest system per centre and the newest init (Nov 2026, otherwise Oct 2026) that ECMWF has published. Lead time on CDS counts the init month as `leadtime_month = 1`.
 
-```bash
-VITE_API_URL=http://localhost:8000/api/v1
-```
+**Seasonal (fallback, per system, only if the post-processed product is missing)**: `seasonal-monthly-single-levels`, `"variable": ["snowfall"]`, `"product_type": ["monthly_mean"]`, the same months and leads. It is fetched once for 2026 and once for the 1993–2016 hindcast years. The anomaly is the forecast ensemble mean minus the hindcast mean.
 
-## API Documentation
+**Before running, verify these on the CDS pages:** variable and product names, system numbers and release dates can change between seasons. The scripts fail loudly if constraints don't match.
 
-### Base URL
+## ONI classification
 
-```
-http://localhost:8000/api/v1
-```
+- Source: <https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt>, raw copy saved to `data/raw/oni.ascii.txt`.
+- Only the `DJF` row is used. A winter is labelled by its January year (`DJF 1998` = Dec 1997 – Feb 1998).
+- **El Niño:** DJF ONI ≥ +0.5. **Strong/super:** DJF ONI ≥ +1.5. These are single-season thresholds, not the 5-overlapping-season ENSO-event rule.
+- Year lists are derived from the table at run time and written to `data/interim/oni_classification.json`, `output/summary.txt` and the HTML methods section. Nothing is hardcoded.
+- The comparison set for the t-test is all other winters 1950/51–2025/26 that are not El Niño. That set includes neutral and La Niña winters.
 
-### Endpoints
+## Processing steps
 
-#### Resorts
+1. **Units.** ERA5 `monthly_averaged_reanalysis` snowfall `sf` is the mean daily accumulation in m water equivalent. Each month is multiplied by its number of days, then Dec(Y−1) + Jan(Y) + Feb(Y) are summed and the total is converted to inches (× 39.3701). Winters missing any month are dropped. Approximate snowfall is water equivalent × 10 (10:1). It is labelled approximate everywhere.
+2. **Climatology.** Mean of DJF 1990/91–2019/20 (label years 1991–2020).
+3. **Composites.** Anomaly = mean over composite winters − climatology. Percent of normal = 100 × composite mean / climatology, masked where the normal is below 0.25 in w.e. Significance uses a two-sided Welch t-test (`scipy.stats.ttest_ind`, `equal_var=False`) of composite winters against all other winters. The p-value is stored and p ≥ 0.10 is hatched.
+4. **Forecast.** The post-processed anomaly is a rate in m s⁻¹. Each valid month is multiplied by its seconds, using the init date and lead to find the month. A check confirms that exactly Dec, Jan and Feb were found, then the three are summed. The units attribute is checked, and the script stops if it isn't a per-second rate. The C3S mean is the equal-weight mean of the available systems after bilinear regridding to the ECMWF grid. Forecast percent of normal = 100 × (ERA5 normal + anomaly) / ERA5 normal on the forecast grid. This is approximate, because the model anomalies use a 1993–2016 hindcast base, not 1991–2020.
+5. **Longitudes.** All grids are mapped from 0–360 to −180–180 and sorted. Latitudes are sorted ascending. NetCDF dimensions `valid_time`/`latitude`/`longitude` (new CDS) and legacy `time`/`expver` are both handled. GRIB is read with cfgrib.
+6. **Resorts.** Layers are bilinearly interpolated (`xarray.interp`, `method="linear"`) at each resort. ERA5 (~0.25°, ~25 km) and the seasonal models (~1°, ~100 km) do not resolve individual peaks, so values describe the surrounding area. Each resort is checked for falling on land (Natural Earth land minus lakes) and inside the data domain.
+7. **Quality checks** (`data/interim/meta.json`, printed during the run):
+   - Regional mean anomalies are compared with the canonical El Niño pattern: drier Great Lakes/Ohio Valley, Pacific Northwest and northern Rockies; wetter southern tier, Sierra and southern Rockies. Inconsistent boxes print `CHECK`. If the pattern looks inverted, inspect units, sign and lead mapping first.
+   - The resort count is reported and compared with the Ikon list, along with lists of resorts outside the domain or off land.
 
-**List all resorts**
-```http
-GET /resorts/
-```
+**Known domain issue:** the requested area's western edge (−140°) excludes Alaska. Alyeska (about −149°) gets flagged `in_data_domain = False`, with no sampled values. It is named in the map footer. To include it, widen `AREA` in `pipeline/config.py` to about −152° W.
 
-Query Parameters:
-- `state` (optional): Filter by state
-- `region` (optional): Filter by region
-- `active_only` (optional, default: true): Only active resorts
+## Code layout
 
-Response:
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": 1,
-      "name": "Jackson Hole Mountain Resort",
-      "slug": "jackson-hole",
-      "state": "Wyoming",
-      "region": "Tetons",
-      "base_elevation_ft": 6311,
-      "summit_elevation_ft": 10450
-    }
-  ]
-}
-```
+| File | Role |
+|---|---|
+| `pipeline/config.py` | Area, periods, thresholds, paths |
+| `pipeline/fetch_*.py` | One downloader per source; each raises `FetchError` on failure |
+| `pipeline/compute_layers.py` | DJF totals, climatology, composites, t-test, forecasts, grid CSV, resort CSV, sanity checks |
+| `pipeline/make_maps.py` | Print PNGs and transparent web layers (cartopy) |
+| `pipeline/build_html.py` | Self-contained `index.html` |
+| `pipeline/run_all.py` | Runs everything in order; stops at the first failure and writes `output/FAILED.txt` |
 
-**Get resort details**
-```http
-GET /resorts/{slug}
-```
+## Sources
 
-Response includes latest conditions:
-```json
-{
-  "success": true,
-  "data": {
-    "id": 1,
-    "name": "Jackson Hole Mountain Resort",
-    "slug": "jackson-hole",
-    "latest_conditions": {
-      "time": "2026-01-08T10:00:00Z",
-      "base_depth_in": 45.0,
-      "new_snow_24h_in": 8.0,
-      "temperature_f": 24.0,
-      "snow_quality_score": 87.5,
-      "confidence_score": 0.92
-    }
-  }
-}
-```
-
-**Get historical data**
-```http
-GET /resorts/{slug}/history?hours=24
-```
-
-#### Conditions
-
-**Get latest conditions for all resorts**
-```http
-GET /conditions/latest
-```
-
-**Compare multiple resorts**
-```http
-GET /conditions/compare?resorts=jackson-hole,vail,palisades-tahoe
-```
-
-For complete API documentation, visit [http://localhost:8000/docs](http://localhost:8000/docs) when running the server.
-
-## Development
-
-### Running Tests
-
-**Backend Tests**
-```bash
-cd backend
-pytest tests/ -v --cov=app --cov-report=html
-```
-
-**Frontend Tests**
-```bash
-cd frontend
-npm test
-npm run test:coverage
-```
-
-### Database Migrations
-
-Create a new migration:
-```bash
-cd backend
-alembic revision --autogenerate -m "Description of changes"
-```
-
-Apply migrations:
-```bash
-alembic upgrade head
-```
-
-Rollback:
-```bash
-alembic downgrade -1
-```
-
-### Code Quality
-
-**Backend Linting**
-```bash
-cd backend
-black app/  # Format code
-flake8 app/  # Check style
-mypy app/  # Type checking
-```
-
-**Frontend Linting**
-```bash
-cd frontend
-npm run lint
-npm run lint:fix
-```
-
-## Deployment
-
-### Production Checklist
-
-- [ ] Set `DEBUG=false` in backend environment
-- [ ] Use strong `SECRET_KEY`
-- [ ] Configure production database (managed PostgreSQL)
-- [ ] Configure production Redis
-- [ ] Set up SSL/TLS certificates
-- [ ] Configure CORS origins for production domain
-- [ ] Set up monitoring (Sentry)
-- [ ] Configure backup strategy for database
-- [ ] Set up CDN for frontend static assets
-- [ ] Configure environment-specific API keys
-
-### Deployment Options
-
-#### Option 1: Railway (Recommended for MVP)
-
-1. Create Railway account
-2. Connect GitHub repository
-3. Add PostgreSQL and Redis services
-4. Configure environment variables
-5. Deploy backend and frontend services
-
-#### Option 2: Docker on VPS
-
-```bash
-# Build and start all services
-docker-compose -f docker-compose.prod.yml up -d
-
-# Run migrations
-docker-compose exec backend alembic upgrade head
-```
-
-#### Option 3: Separate Services
-
-- **Backend**: Railway / Render / Fly.io
-- **Frontend**: Vercel / Netlify / Cloudflare Pages
-- **Database**: Supabase / Railway PostgreSQL
-- **Redis**: Upstash / Railway Redis
-
-## Data Sources
-
-SnowSpot aggregates data from multiple sources:
-
-1. **Official Resort APIs/Websites**: Direct snow reports, lift status, terrain info
-2. **SNOTEL Stations**: USDA snow telemetry network for accurate snow depth and weather
-3. **Weather APIs**: NOAA, OpenWeatherMap for forecasts
-4. **Webcams**: Visual verification of conditions (MVP: manual, Phase 2: computer vision)
-
-### Data Freshness
-
-- Resort conditions: Updated every 15 minutes
-- SNOTEL data: Updated every 30 minutes
-- Weather forecasts: Updated hourly
-- Confidence scores provided for all data points
-
-## Contributing
-
-Contributions are welcome! Please follow these guidelines:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Development Guidelines
-
-- Follow PEP 8 for Python code
-- Use TypeScript strict mode
-- Write tests for new features
-- Update documentation as needed
-- Keep commits focused and descriptive
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Roadmap
-
-### Phase 1: MVP (Current)
-- [x] Core backend API
-- [x] Data scrapers for major resorts
-- [x] SNOTEL integration
-- [x] Frontend dashboard
-- [x] Quality scoring algorithm
-- [ ] Email alerts
-- [ ] 50 resort coverage
-
-### Phase 2: Enhanced Features
-- [ ] Mobile applications (iOS/Android)
-- [ ] Machine learning predictions
-- [ ] Computer vision webcam analysis
-- [ ] User accounts and favorites
-- [ ] Social features
-- [ ] Advanced analytics
-
-### Phase 3: Growth
-- [ ] 500+ resort coverage
-- [ ] International resorts
-- [ ] Premium features
-- [ ] API marketplace
-- [ ] Partnership integrations
-
-## Support
-
-- **Documentation**: [Full build spec](./SnowSpot%20MVP%20-%20Complete%20Build%20Spec.md)
-- **Issues**: [GitHub Issues](https://github.com/yourusername/snowspot/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/snowspot/discussions)
-
-## Acknowledgments
-
-- USDA SNOTEL network for providing open weather data
-- All ski resorts that provide public condition information
-- Open source community for the amazing tools and libraries
-
----
-
-**Built with passion for powder by skiers, for skiers.**
+- Hersbach et al. (2023): ERA5 monthly averaged data on single levels from 1940 to present. Copernicus C3S CDS, DOI 10.24381/cds.f17050d7.
+- Copernicus C3S seasonal forecast datasets (CDS): `seasonal-postprocessed-single-levels` and `seasonal-monthly-single-levels`. Systems: ECMWF, UK Met Office, Météo-France, DWD, CMCC, NCEP, JMA, ECCC.
+- NOAA Climate Prediction Center: Oceanic Niño Index (ERSSTv5).
+- Ikon Pass destinations: <https://www.ikonpass.com/en/destinations>. Coordinates from OpenStreetMap via Nominatim, with the per-resort OSM URL recorded.
+- Natural Earth 1:50m admin-1 states/provinces, admin-0 countries, lakes and land (public domain).
